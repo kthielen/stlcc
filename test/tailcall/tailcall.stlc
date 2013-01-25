@@ -1,0 +1,36 @@
+
+# a very basic test for tail-call correctness
+extern MessageBoxA :: (int, [char], [char], int) -> int;
+
+msg1 :: int -> int
+msg1(a) =
+ MessageBoxA(0, "Just testing ...", "Test", 0);
+
+msg2 :: (int, int) -> int
+msg2(a, b) =
+ MessageBoxA(0, "Just testing ...", "Test", 0);
+
+msg3 :: (int, int, int) -> int
+msg3(a, b, c) =
+ MessageBoxA(0, "Just testing ...", "Test", 0);
+
+msg4 :: (int, int, int, int) -> int
+msg4(a, b, c, d) =
+ MessageBoxA(0, "Just testing ...", "Test", 0);
+
+msg5 :: (int, int, int, int, int) -> int
+msg5(a, b, c, d, e) =
+ MessageBoxA(0, "Just testing ...", "Test", 0);
+
+type dispenum = <a:unit, b:unit, c:unit, d:unit, e:unit>;
+
+dispatch :: dispenum -> int
+dispatch(d) =
+ case d of
+   a _. msg1(0)
+ | b _. msg2(0,1)
+ | c _. msg3(0,1,2)
+ | d _. msg4(0,1,2,3)
+ | e _. msg5(0,1,2,3,4);
+
+test :: int = dispatch(<c=() | a:unit, b:unit, c:unit, d:unit, e:unit>);

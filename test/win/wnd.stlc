@@ -1,0 +1,88 @@
+
+# type declarations
+type string    = [char];
+type bool      = <false:unit, true:unit>;
+type TDWORD    = int;
+type UINT      = int;
+type LPCTSTR   = string;
+type HWND      = int;
+type HMENU     = int;
+type HINSTANCE = int;
+type HCURSOR   = int;
+type LPVOID    = int;
+type BOOL      = int;
+type WPARAM    = int;
+type LPARAM    = int;
+type LRESULT   = int;
+type WNDPROC   = (HWND, UINT, WPARAM, LPARAM) -> LRESULT;
+
+type POINT     = { x : int, y : int };
+type MSG       = { hwnd : HWND, message : UINT, wParam : WPARAM, lParam : LPARAM, time : TDWORD, pt : POINT };
+type WNDCLASS  = { style : int, lpfnWndProc : WNDPROC, cbClsExtra : int, cbWndExtra : int, hInstance : int, hIcon : int, hCursor : int, hbrBackground : int, lpszMenuName : int, lpszClassName : string };
+type LPMSG     = MSG;
+
+# prepare a couple of strings to display
+title     :: string = "Test ASM Program.";
+classname :: string = "AsmWndClass";
+failreg   :: string = "Failed to register window class.";
+failwnd   :: string = "Failed to create window.";
+etitle    :: string = "Error";
+hwnd      :: int    = 0;
+
+# import runtime functions
+extern not :: bool -> bool;
+extern or  :: (bool, bool) -> bool;
+extern and :: (bool, bool) -> bool;
+extern eq  :: (int, int) -> bool;
+extern gt  :: (int, int) -> bool;
+extern error :: string -> int;
+
+# import Windows functions
+extern RegisterClassA    :: WNDCLASS -> int;
+extern CreateWindowExA   :: (TDWORD, LPCTSTR, LPCTSTR, TDWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID) -> HWND;
+extern ShowWindow        :: (HWND, int) -> BOOL;
+extern GetMessageA       :: (LPMSG, HWND, UINT, UINT) -> BOOL;
+extern TranslateMessage  :: LPMSG -> BOOL;
+extern DispatchMessageA  :: LPMSG -> LRESULT;
+extern IsWindowVisible   :: HWND -> BOOL;
+extern DefWindowProcA    :: (HWND, UINT, WPARAM, LPARAM) -> LRESULT;
+extern LoadCursorA       :: (HINSTANCE, int) -> HCURSOR;
+extern MessageBoxA       :: (int, [char], [char], int) -> int;
+extern GetModuleHandleA  :: int -> HINSTANCE;
+
+# abort if false
+assert :: (bool, string) -> int
+assert(c,msg) =
+   case c of
+     true  _. 0
+   | false _. error(msg);
+
+# create a window and run a basic message loop
+main :: string -> int
+main(msg) =
+  let hmod      = GetModuleHandleA(0) in
+  let classname = "STLCWindow" in
+  let cls       = { style=0, lpfnWndProc=wndProc, cbClsExtra=0, cbWndExtra=0, hInstance=hmod, hIcon=0, hCursor=LoadCursorA(0,0), hbrBackground=5, lpszMenuName=0, lpszClassName=classname } in
+  let rr        = RegisterClassA(cls) in # exit if failed
+  let _         = assert(not(eq(rr,0)),"Class registration failed!") in
+  let hwnd      = CreateWindowExA(0,classname,msg,13565952,200,100,640,480,0,0,hmod,0) in # exit if failed
+  let _         = assert(not(eq(hwnd,0)),"Window creation failed!") in
+  let sr        = ShowWindow(hwnd,5) in
+   msgPump(hwnd);
+
+msgPump :: HWND -> int
+msgPump(h) =
+  let msg = { hwnd=h, message=0, wParam=0, lParam=0, time=0, pt={x=0,y=0} } in
+  let gmr = GetMessageA(msg,h,0,0) in
+  case (and(gt(gmr,0),not(eq(IsWindowVisible(h),0)))) of
+    true  _.
+      let _ = TranslateMessage(msg) in
+      let _ = DispatchMessageA(msg) in
+        msgPump(h)
+  | false _. 0;
+
+wndProc :: (HWND, UINT, WPARAM, LPARAM) -> LRESULT
+wndProc(h,um,wp,lp) =
+  DefWindowProcA(h,um,wp,lp);
+
+result :: int = main("Test Window");

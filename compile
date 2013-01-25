@@ -1,0 +1,3 @@
+#!/bin/sh
+
+ghc --make Main -odir ./build/ -hidir ./build/ -o ./build/stlcc

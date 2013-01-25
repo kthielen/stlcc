@@ -1,0 +1,58 @@
+
+# data types used in this example
+type bool = <false:unit, true:unit>;
+type expr = mu x.<const:int, plus:{left:x, right:x}, minus:{left:x, right:x}>;
+
+# runtime and OS functions used in this example
+extern MessageBoxA :: (int, [char], [char], int) -> int;
+extern concat      :: ([char], [char]) -> [char];
+extern itoa        :: int -> [char];
+extern intEq       :: (int, int) -> bool;
+extern add         :: (int, int) -> int;
+extern sub         :: (int, int) -> int;
+
+# constructors for the expr data type
+const :: int -> expr
+const (v) =
+ roll [expr] <const=v | const:int, plus:{left:expr, right:expr}, minus:{left:expr, right:expr}>;
+
+plus :: (expr, expr) -> expr
+plus (l, r) =
+ roll [expr] <plus={left=l, right=r} | const:int, plus:{left:expr, right:expr}, minus:{left:expr, right:expr}>;
+
+minus :: (expr, expr) -> expr
+minus (l, r) =
+ roll [expr] <minus={left=l, right=r} | const:int, plus:{left:expr, right:expr}, minus:{left:expr, right:expr}>;
+
+# evaluate an arithmetic expression
+eval :: expr -> int
+eval (e) =
+ case unroll [expr] e of
+   const x. x
+ | plus  p. add(eval(p.left), eval(p.right))
+ | minus p. sub(eval(p.left), eval(p.right));
+
+# show an arithmetic expression
+show :: expr -> [char]
+show (e) = 
+ case unroll [expr] e of
+   const x. itoa(x)
+ | plus  p. concat("(", concat(show(p.left), concat("+", concat(show(p.right, ")")))))
+ | minus p. concat("(", concat(show(p.left), concat("-", concat(show(p.right, ")")))));
+
+# translate a boolean into a message of success or failure
+showBool :: bool -> [char]
+showBool (b) =
+ case b of
+   true  _. "Success"
+ | false _. "Failure";
+
+# print and verify the evaluation of an arithmetic expression
+testEval :: (expr, int) -> int
+testEval (e, expected) =
+ let a = eval(e) in
+ MessageBoxA(0, concat("eval (", concat(show(e), concat(") = ", itoa(a)))), showBool(intEq(a, expected)), 0);
+
+# test a few simple cases
+tst0 :: int = testEval(plus(const(5), minus(const(6), const(1))), 10);
+tst1 :: int = testEval(plus(minus(plus(const(1), const(2)), const(3)), plus(plus(const(2), minus(const(4), const(3))), const(10))), 13);

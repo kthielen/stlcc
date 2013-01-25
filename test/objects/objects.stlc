@@ -1,0 +1,66 @@
+
+# data types used in this example
+type bool = <false:unit, true:unit>;
+type color = {red:int, green:int, blue:int};
+type point = mu this.exists E.{x:int, y:int, translate:(this, int, int) -> this, show:this -> [char], private:E};
+type pobj  = exists E.{x:int, y:int, translate:(point, int, int) -> point, show:point -> [char], private:E};
+type ipoint = mu this.{x:int, y:int, translate:(this, int, int) -> this, show:this -> [char]};
+type cpoint = mu this.{x:int, y:int, translate:(this, int, int) -> this, show:this -> [char], color:{red:int, green:int, blue:int}};
+
+# runtime and OS functions used in this example
+extern MessageBoxA :: (int, [char], [char], int) -> int;
+extern concat      :: ([char], [char]) -> [char];
+extern itoa        :: int -> [char];
+extern intEq       :: (int, int) -> bool;
+extern add         :: (int, int) -> int;
+extern sub         :: (int, int) -> int;
+
+# constructor for the ipoint data type
+ipoint :: (int, int) -> point
+ipoint (x,y) =
+ roll [point] pack {x=x, y=y, translate=iptranslate, show=ipshow} as pobj;
+
+iptranslate :: (ipoint, int, int) -> ipoint
+iptranslate (p, dx, dy) =
+ let rp = unroll [ipoint] p in
+  roll [ipoint] {x=add(rp.x, dx), y=add(rp.y, dy), translate=iptranslate, show=ipshow};
+
+ipshow :: ipoint -> [char]
+ipshow (p) =
+ let rp = unroll [ipoint] p in
+  concat("(", concat(itoa(rp.x), concat(", ", concat(itoa(rp.y), ")"))));
+
+# constructor for the cpoint data type
+cpoint :: (int, int, color) -> cpoint
+cpoint (x,y,c) =
+ roll [point] pack {x=x, y=y, translate=cptranslate, show=cpshow, color=c} as pobj;
+
+cptranslate :: (cpoint, int, int) -> cpoint
+cptranslate (p,dx,dy) =
+ let rp = unroll [cpoint] p in
+  roll [cpoint] {x=add(rp.x, dx), y=add(rp.y, dy), translate=cptranslate, show=cpshow, color=rp.color};
+
+cpshow :: cpoint -> [char]
+cpshow (p) =
+ let rp = unroll [cpoint] p in
+  concat("(", concat(itoa(rp.x), concat(", ", concat(itoa(rp.y), concat(", ", concat(showColor(rp.color), ")"))))));
+
+showColor :: color -> [char]
+showColor (c) =
+ concat("#(", concat(itoa(c.red), concat(", ", concat(itoa(c.green), concat(", ", concat(itoa(c.blue), ")"))))));
+
+# show the movement of a point
+showMove :: (point, int, int) -> [char]
+showMove (p, dx, dy) =
+ let up = unroll [point] p in
+ unpack up as {up,E} in
+ concat(up.show(up), concat(" + (", concat(itoa(dx), concat(", ", concat(itoa(dy), concat(") => ", up.show(up.translate(up, dx, dy))))))));
+
+# shorten the printing of a point message
+msgBox :: [char] -> int
+msgBox (s) =
+ MessageBoxA(0, s, "", 0);
+
+# test a few simple cases
+tst0 :: int = msgBox(showMove(ipoint(0, 0), 5, 4));
+tst1 :: int = msgBox(showMove(cpoint(0, 0, {red=1,green=2,blue=5}), 5, 4));
